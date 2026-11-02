@@ -59,8 +59,17 @@ an EU, US, or FedRAMP jurisdiction needs endpoint support before connection.
 
 ## Verification limits
 
-`xcodegen generate`, plist validation, and Git whitespace checks passed locally.
-App tests and ShareKit tests could not run: full Xcode requires license acceptance,
-and the Command Line Tools Swift Package Manager fails to load BuildServerProtocol.
-The regression tests cover the offline updater and removal of upstream trust.
-App launch and R2 upload verification remain pending.
+`xcodegen generate`, plist validation, static trust checks, and Git whitespace
+checks passed locally. After Xcode license acceptance, the Debug build passed
+with Sparkle 2.10.1. All 53 ShareKit tests, 279 SharedKit tests, and 29 selected
+updater tests passed. The updater tests cover offline behavior and removal of
+upstream trust.
+
+The configured R2 destination passed an upload, public read, and deletion test
+using the app's actual R2 code. Credentials were saved in macOS Keychain and
+verified by readback. Automatic uploads remain off. Account and bucket settings
+are stored locally and are excluded from this repository.
+
+The running app's Cloud Share settings showed the selected R2 bucket. Its
+Test Connection action reported success and confirmed test file cleanup.
+The General settings showed update controls disabled.
