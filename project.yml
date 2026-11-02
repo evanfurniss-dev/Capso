@@ -1,7 +1,7 @@
 # project.yml
 name: Capso
 options:
-  bundleIdPrefix: com.awesomemacapps
+  bundleIdPrefix: io.startsmooth
   deploymentTarget:
     macOS: "15.0"
   xcodeVersion: "26.0"
@@ -15,7 +15,7 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "15.0"
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "Developer ID Application"
-    DEVELOPMENT_TEAM: "T247WTJV77"
+    DEVELOPMENT_TEAM: ""
     ENABLE_HARDENED_RUNTIME: YES
     SWIFT_EMIT_LOC_STRINGS: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
@@ -58,7 +58,7 @@ packages:
     exactVersion: "1.1.0"
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
-    exactVersion: "2.9.1"
+    exactVersion: "2.10.1"
 
 targets:
   Capso:
@@ -73,7 +73,7 @@ targets:
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.awesomemacapps.capso
+        PRODUCT_BUNDLE_IDENTIFIER: io.startsmooth.capso
         INFOPLIST_FILE: App/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/Entitlements/Capso.entitlements
         LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
@@ -114,7 +114,7 @@ targets:
       - package: AnnotationKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.awesomemacapps.capso.tests
+        PRODUCT_BUNDLE_IDENTIFIER: io.startsmooth.capso.tests
         GENERATE_INFOPLIST_FILE: YES
         BUNDLE_LOADER: "$(TEST_HOST)"
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Capso.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Capso"

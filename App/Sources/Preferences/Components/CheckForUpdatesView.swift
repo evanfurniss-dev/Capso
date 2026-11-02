@@ -52,18 +52,15 @@ final class UpdateManager: NSObject, ObservableObject {
     private var autoDownloadObservation: NSKeyValueObservation?
     private var clearStatusTask: Task<Void, Never>?
 
-    lazy var updaterController = SPUStandardUpdaterController(
-        startingUpdater: true,
-        updaterDelegate: self,
-        userDriverDelegate: nil
-    )
-
+    // This fork stays offline until it has its own feed and signing identity.
+    // A separate implementation also ignores preferences from upstream installs.
+    private let offlineUpdater = OfflineSoftwareUpdater()
     private let injectedUpdater: (any SoftwareUpdating)?
 
-    var updater: any SoftwareUpdating { injectedUpdater ?? updaterController.updater }
+    var updater: any SoftwareUpdating { injectedUpdater ?? offlineUpdater }
+    var updatesEnabled: Bool { injectedUpdater != nil }
 
-    /// - Parameter updater: Overrides Sparkle's updater. Tests pass a stand-in;
-    ///   the app passes nothing so the real `SPUStandardUpdaterController` is used.
+    /// Tests can supply an updater without enabling network access in the app.
     init(updater: (any SoftwareUpdating)? = nil) {
         injectedUpdater = updater
         super.init()

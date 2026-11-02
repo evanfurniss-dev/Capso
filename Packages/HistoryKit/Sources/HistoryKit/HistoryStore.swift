@@ -40,7 +40,7 @@ public final class HistoryStore: Sendable {
     private static func defaultDirectory() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return appSupport
-            .appendingPathComponent("com.awesomemacapps.capso", isDirectory: true)
+            .appendingPathComponent("io.startsmooth.capso", isDirectory: true)
             .appendingPathComponent("history", isDirectory: true)
     }
 

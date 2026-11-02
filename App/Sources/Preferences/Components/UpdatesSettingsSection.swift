@@ -45,6 +45,12 @@ struct UpdatesSettingsSection: View {
                     CheckForUpdatesView(updateManager: updateManager)
                 }
             }
+            .disabled(!updateManager.updatesEnabled)
+            if !updateManager.updatesEnabled {
+                Text("Updates are disabled. Install new versions manually.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
