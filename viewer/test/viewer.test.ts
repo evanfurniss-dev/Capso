@@ -2,7 +2,7 @@ import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { videoView } from "../src/views.ts";
-const password = "test-only-library-password-1234",
+const password = "test-only-12",
   origin = "https://example.test";
 let mf: Miniflare, cookie: string;
 before(async () => {
@@ -82,7 +82,9 @@ test("unknown IDs return 404 and bucket metadata stays private through the Worke
   assert.equal((await request("/metadata/ai6uo2q.json")).status, 404);
   assert.equal((await request("/library")).status, 303);
 });
-test("login rejects cross-site and incorrect passwords; session permits the private library", async () => {
+test("a 12-character password signs in; cross-site and incorrect attempts fail", async () => {
+  const form = await request("/login");
+  assert.match(await form.text(), /minlength="12"/);
   assert.equal(
     (
       await request("/login", {

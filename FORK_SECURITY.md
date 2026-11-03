@@ -73,3 +73,21 @@ are stored locally and are excluded from this repository.
 The running app's Cloud Share settings showed the selected R2 bucket. Its
 Test Connection action reported success and confirmed test file cleanup.
 The General settings showed update controls disabled.
+
+## Local installation
+
+Use a Developer ID signed Release build for the installed app. An ad hoc build
+has a designated requirement tied to its code hash, which changes on rebuild and
+can prompt again for Keychain access. Keep `io.startsmooth.capso` and the same
+Developer ID signer across installed updates. Never allow all applications to
+read the sharing credentials.
+
+The owner's signing identity is `Developer ID Application: START SMOOTH LLC
+(TXFWB9J766)`. Build with `DEVELOPMENT_TEAM=TXFWB9J766` and that identity, then
+verify the signature before copying the app into `/Applications/Capso.app`.
+The first launch after switching from an ad hoc build can require approval of
+existing Keychain items and screen recording permission. A denied credential
+prompt leaves Cloud Share unavailable and does not terminate the app.
+
+Apple describes designated requirements and update identity here:
+https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements

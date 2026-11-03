@@ -23,7 +23,7 @@ Run `npm ci`, `npx wrangler types worker-configuration.d.ts`, `npm run check`, a
 `npx wrangler deploy --dry-run --outdir dist` before `npm test`. Tests exercise
 Worker requests against local R2 through Miniflare. Local secrets belong in an
 ignored `.dev.vars` file. Use `wrangler secret put ADMIN_PASSWORD` for deployment.
-Use a password of 16 to 256 characters; rotating it expires existing sessions.
+Use a password of 12 to 256 characters; rotating it expires existing sessions.
 
 ## Design sources
 
