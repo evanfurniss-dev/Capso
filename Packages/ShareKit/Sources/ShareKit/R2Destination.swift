@@ -39,7 +39,7 @@ public actor R2Destination: ShareDestination {
             objectKey: objectKey
         )
         // R2 ignores region for routing; SigV4 still requires a region string.
-        try await S3CompatibleHTTP.putObject(
+        let sourceETag = try await S3CompatibleHTTP.putObject(
             file: file,
             target: target,
             region: "auto",
@@ -51,8 +51,15 @@ public actor R2Destination: ShareDestination {
             let id = String(key.dropLast(4))
             try await putAsset(assets.poster, key: "assets/\(id)/poster.jpg", contentType: "image/jpeg")
             try await putAsset(assets.playback, key: "assets/\(id)/playback.mp4", contentType: "video/mp4")
+            var audioChunks: [[String: Any]] = []
+            for chunk in assets.audioChunks {
+                let chunkKey = "assets/\(id)/\(chunk.file.lastPathComponent)"
+                try await putAsset(chunk.file, key: chunkKey, contentType: "audio/mp4")
+                audioChunks.append(["key": chunkKey, "start": chunk.start, "duration": chunk.duration])
+            }
             let metadata = assets.directory.appendingPathComponent("metadata.json")
-            let details: [String: Any] = ["title": "Screen recording", "description": "", "duration": assets.duration]
+            var details: [String: Any] = ["title": "Screen recording", "description": "", "duration": assets.duration, "hasAudio": assets.hasAudio, "audioDuration": assets.audioDuration, "audioChunks": audioChunks, "audioPreparationFailed": assets.audioPreparationFailed, "automation": ["status": "queued"]]
+            if let sourceETag { details["sourceETag"] = sourceETag }
             try JSONSerialization.data(withJSONObject: details).write(to: metadata)
             try await putAsset(metadata, key: "metadata/\(id).json", contentType: "application/json")
         }

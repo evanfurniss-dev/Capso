@@ -16,3 +16,8 @@ buttons. All pages use visible keyboard focus and no autoplay.
 The previous Dia playback failure has not been reproduced in Dia. Playback
 copies are H.264 level 4.0 at 1920x1080 and retain the original audio. The
 original failure must remain an open compatibility question until Dia is tested.
+
+Automatic details add an R2 queue trigger and the `VideoEnrichment` Workflow.
+The analysis bucket has public access disabled. Generated titles and descriptions
+are validated before they update the public metadata. Transcripts are not added
+to public pages. Model outputs and transcript bodies are excluded from logs.

@@ -29,6 +29,10 @@ export interface Video {
   poster: string;
   playback: string;
   revision: string;
+  processingStatus?: string;
+  transcriptKey?: string;
+  generatedTitle?: string;
+  generatedDescription?: string;
 }
 export function videoView(
   v: Video,
@@ -41,9 +45,14 @@ export function videoView(
   const description =
     v.description || `Watch this recording shared by ${owner}.`;
   const head = `<link rel="canonical" href="${escape(url)}"><meta name="description" content="${escape(description)}"><meta property="og:title" content="${escape(v.title)}"><meta property="og:description" content="${escape(description)}"><meta property="og:type" content="video.other"><meta property="og:url" content="${escape(url)}"><meta property="og:image" content="${escape(poster)}?v=${escape(v.revision)}"><meta property="og:image:alt" content="${escape(v.title)}"><meta property="og:image:type" content="image/jpeg"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escape(v.title)}"><meta name="twitter:description" content="${escape(description)}"><meta name="twitter:image" content="${escape(poster)}?v=${escape(v.revision)}">`;
-  const body = `<div class="stage"><div class="player"><video controls playsinline preload="metadata" poster="${escape(v.poster)}" aria-label="${escape(v.title)}"><source src="${escape(v.playback)}" type="video/mp4"><a href="/${escape(v.key)}">Download the video</a></video></div></div><div class="below"><div class="details"><h1>${escape(v.title)}</h1><div class="meta"><span>${escape(owner)}</span><span class="dot" aria-hidden="true">·</span><time datetime="${escape(v.created)}">${date(v.created)}</time><span class="dot" aria-hidden="true">·</span><span id="duration">${v.duration ? duration(v.duration) : "Video"}</span></div>${v.description ? `<p class="description">${escape(v.description)}</p>` : ""}<p class="note" id="playback-help" hidden>Playback did not start. <a href="/${escape(v.key)}?download=1">Download the original video</a>.</p></div><div><div class="actions"><button class="primary" id="copy">Copy link</button><a class="button" href="/${escape(v.key)}?download=1" download>Download</a></div><p class="status" role="status" id="copy-status"></p></div></div>`;
+  const body = `<div class="stage"><div class="player"><video controls playsinline preload="metadata" poster="${escape(v.poster)}" aria-label="${escape(v.title)}"><source src="${escape(v.playback)}" type="video/mp4"><a href="/${escape(v.key)}">Download the video</a></video></div></div><div class="below"><div class="details"><h1 id="video-title">${escape(v.title)}</h1><div class="meta"><span>${escape(owner)}</span><span class="dot" aria-hidden="true">·</span><time datetime="${escape(v.created)}">${date(v.created)}</time><span class="dot" aria-hidden="true">·</span><span id="duration">${v.duration ? duration(v.duration) : "Video"}</span></div><p class="description" id="video-description" ${v.description ? "" : "hidden"}>${escape(v.description)}</p><p class="note" id="processing-status" role="status">${["queued", "transcribing", "summarizing"].includes(v.processingStatus ?? "") ? "Preparing the title and description…" : ""}</p><p class="note" id="playback-help" hidden>Playback did not start. <a href="/${escape(v.key)}?download=1">Download the original video</a>.</p></div><div><div class="actions"><button class="primary" id="copy">Copy link</button><a class="button" href="/${escape(v.key)}?download=1" download>Download</a></div><p class="status" role="status" id="copy-status"></p></div></div>`;
   const script = `const video=document.querySelector('video');video.addEventListener('loadedmetadata',()=>{const s=Math.round(video.duration);if(Number.isFinite(s))document.getElementById('duration').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')});video.addEventListener('error',()=>document.getElementById('playback-help').hidden=false);document.querySelector('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(${JSON.stringify(url)});document.querySelector('#copy-status').textContent='Link copied.'}catch{document.querySelector('#copy-status').textContent='Copy the page address from your browser.'}});`;
-  return shell(v.title, body, owner, nonce, head, script);
+  const polling = ["queued", "transcribing", "summarizing"].includes(
+    v.processingStatus ?? "",
+  )
+    ? `let polls=0;async function refreshDetails(){if(polls++>=60)return;try{const response=await fetch('/v/${v.id}/details',{cache:'no-store'});if(response.ok){const value=await response.json();document.getElementById('video-title').textContent=value.title;document.title=value.title;const description=document.getElementById('video-description');description.textContent=value.description;description.hidden=!value.description;if(!['queued','transcribing','summarizing'].includes(value.status)){document.getElementById('processing-status').textContent='';return;}}}catch{}setTimeout(refreshDetails,10000)}setTimeout(refreshDetails,10000);`
+    : "";
+  return shell(v.title, body, owner, nonce, head, script + polling);
 }
 export function date(s: string) {
   return escape(
@@ -51,7 +60,7 @@ export function date(s: string) {
       month: "long",
       day: "numeric",
       year: "numeric",
-      timeZone: "UTC",
+      timeZone: "America/Chicago",
     }),
   );
 }
@@ -85,10 +94,11 @@ export function editView(
   owner: string,
   nonce: string,
   saved: boolean,
+  transcript = "",
 ) {
   return shell(
     "Edit " + v.title,
-    `<a href="/library">← My library</a><div class="edit-grid"><section class="panel"><h1>Edit video details</h1>${saved ? '<p class="saved" role="status">Changes saved.</p>' : ""}<form class="form" method="post"><input type="hidden" name="revision" value="${escape(v.revision)}"><div><label for="title">Title</label><input id="title" name="title" value="${escape(v.title)}" maxlength="160" required></div><div><label for="description">Description</label><textarea id="description" name="description" maxlength="3000">${escape(v.description)}</textarea></div><button class="primary">Save changes</button></form></section><section><a href="/v/${v.id}"><img src="${escape(v.poster)}" alt="Open ${escape(v.title)}"></a><p class="note">The title and description also appear in link previews. Messaging apps may cache an earlier preview.</p><a class="button" href="/v/${v.id}">Open video</a></section></div>`,
+    `<a href="/library">← My library</a><div class="edit-grid"><section class="panel"><h1>Edit video details</h1>${saved ? '<p class="saved" role="status">Changes saved.</p>' : ""}<form class="form" method="post"><input type="hidden" name="revision" value="${escape(v.revision)}"><div><label for="title">Title</label><input id="title" name="title" value="${escape(v.title)}" maxlength="160" required></div><div><label for="description">Description</label><textarea id="description" name="description" maxlength="3000">${escape(v.description)}</textarea></div><button class="primary">Save changes</button></form></section><section><a href="/v/${v.id}"><img src="${escape(v.poster)}" alt="Open ${escape(v.title)}"></a>${v.processingStatus ? `<p class="note" role="status">${escape(({ queued: "Waiting to create automatic details.", transcribing: "Transcribing the recording…", summarizing: "Writing the title and description…", ready: "Automatic details are ready.", no_speech: "No usable speech was found. You can add details manually.", failed: "Automatic details could not be created. You can still edit this video." } as Record<string, string>)[v.processingStatus] ?? "")}</p>` : ""}${transcript ? `<details class="panel"><summary>Transcript</summary><p class="description">${escape(transcript)}</p></details>` : ""}${v.generatedTitle ? `<details class="panel"><summary>Generated draft</summary><h2>${escape(v.generatedTitle)}</h2><p class="description">${escape(v.generatedDescription ?? "")}</p></details>` : ""}<p class="note">The title and description also appear in link previews. Messaging apps may cache an earlier preview.</p><a class="button" href="/v/${v.id}">Open video</a></section></div>`,
     owner,
     nonce,
   );

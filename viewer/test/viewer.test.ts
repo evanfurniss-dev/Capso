@@ -15,7 +15,7 @@ before(async () => {
           scriptPath: "dist/index.js",
           compatibilityDate: "2026-11-03",
           compatibilityFlags: ["nodejs_compat"],
-          r2Buckets: ["VIDEOS"],
+          r2Buckets: ["VIDEOS", "ANALYSIS"],
           bindings: {
             ADMIN_PASSWORD: password,
             OWNER_NAME: "Evan Furniss",
@@ -46,7 +46,14 @@ before(async () => {
     JSON.stringify({
       title: "Walkthrough",
       description: "A video description.",
+      automation: { status: "transcribing" },
+      transcriptKey: "ai6uo2q/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/transcript.json",
     }),
+  );
+  const analysis = await mf.getR2Bucket("ANALYSIS");
+  await analysis.put(
+    "ai6uo2q/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/transcript.json",
+    JSON.stringify({ text: "Private transcript example.", segments: [] }),
   );
 });
 after(async () => {
@@ -136,6 +143,10 @@ test("editing requires a session, saves text and rejects stale writes", async ()
     body: fields.toString(),
   };
   assert.equal((await request("/library/edit/ai6uo2q", init)).status, 303);
+  const storedDetails = await (await b.get("metadata/ai6uo2q.json"))!.json<{
+    manualDetails: boolean;
+  }>();
+  assert.equal(storedDetails.manualDetails, true);
   assert.match(
     await (await request("/v/ai6uo2q")).text(),
     /og:title" content="Updated title/,
@@ -185,4 +196,23 @@ test("suffix and invalid ranges use correct HTTP semantics", async () => {
   });
   assert.equal(invalid.status, 416);
   assert.equal(invalid.headers.get("content-range"), "bytes */36");
+});
+
+test("public detail polling omits transcripts while the signed-in editor can read them", async () => {
+  const response = await request("/v/ai6uo2q/details");
+  const details = (await response.json()) as Record<string, unknown>;
+  assert.deepEqual(Object.keys(details).sort(), [
+    "description",
+    "status",
+    "title",
+  ]);
+  assert.doesNotMatch(
+    await (await request("/v/ai6uo2q")).text(),
+    /Private transcript example/,
+  );
+  const editor = await request("/library/edit/ai6uo2q", {
+    headers: { Cookie: cookie },
+  });
+  assert.equal(editor.status, 200);
+  assert.match(await editor.text(), /Private transcript example/);
 });

@@ -1,3 +1,5 @@
+import { handleUploadEvents } from "./enrichment";
+export { VideoEnrichment } from "./enrichment";
 import {
   shell,
   videoView,
@@ -9,8 +11,8 @@ import {
 
 const idPattern = /^[a-z0-9][a-z0-9_-]{5,63}$/;
 const encoder = new TextEncoder();
-const jsonHeaders = {
-  "content-type": "application/json",
+const errorHeaders = {
+  "content-type": "text/plain; charset=utf-8",
   "cache-control": "no-store",
 };
 export const metadataKey = (id: string) => `metadata/${id}.json`;
@@ -148,6 +150,31 @@ export async function getVideo(
     poster: poster ? `/assets/${id}/poster.jpg` : "/poster.svg",
     playback: playback ? `/assets/${id}/playback.mp4` : `/${original.key}`,
     revision: metadata?.etag ?? "initial",
+    processingStatus:
+      details.automation &&
+      typeof details.automation === "object" &&
+      "status" in details.automation &&
+      typeof details.automation.status === "string"
+        ? details.automation.status
+        : undefined,
+    transcriptKey:
+      typeof details.transcriptKey === "string"
+        ? details.transcriptKey
+        : undefined,
+    generatedTitle:
+      details.automation &&
+      typeof details.automation === "object" &&
+      "generatedTitle" in details.automation &&
+      typeof details.automation.generatedTitle === "string"
+        ? details.automation.generatedTitle
+        : undefined,
+    generatedDescription:
+      details.automation &&
+      typeof details.automation === "object" &&
+      "generatedDescription" in details.automation &&
+      typeof details.automation.generatedDescription === "string"
+        ? details.automation.generatedDescription
+        : undefined,
   };
 }
 const fallbackPoster = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"><rect width="1200" height="630" fill="#e6eeeb"/><rect x="90" y="72" width="1020" height="486" rx="22" fill="#164b44"/><circle cx="600" cy="285" r="58" fill="white"/><path d="M585 258L630 285L585 312Z" fill="#164b44"/><text x="600" y="428" font-family="system-ui,sans-serif" font-size="36" text-anchor="middle" fill="white">A recording from Evan Furniss</text></svg>`;
@@ -240,6 +267,7 @@ async function asset(req: Request, env: Env, key: string) {
   );
 }
 export default {
+  queue: handleUploadEvents,
   async fetch(req: Request, env: Env): Promise<Response> {
     const nonce = b64(crypto.getRandomValues(new Uint8Array(18)).buffer);
     const url = new URL(req.url),
@@ -382,7 +410,12 @@ export default {
               : {};
             const saved = await env.VIDEOS.put(
               metadataKey(v.id),
-              JSON.stringify({ ...details, title, description }),
+              JSON.stringify({
+                ...details,
+                title,
+                description,
+                manualDetails: true,
+              }),
               {
                 httpMetadata: { contentType: "application/json" },
                 onlyIf: old
@@ -396,8 +429,27 @@ export default {
               });
             return redirect(`/library/edit/${v.id}?saved=1`);
           }
+          let transcript = "";
+          if (
+            v.transcriptKey &&
+            new RegExp(`^${v.id}/[a-f0-9]{32}/transcript\\.json$`).test(
+              v.transcriptKey,
+            )
+          ) {
+            const object = await env.ANALYSIS.get(v.transcriptKey);
+            if (object) {
+              const details = await object.json<{ text?: unknown }>();
+              if (typeof details.text === "string") transcript = details.text;
+            }
+          }
           return page(
-            editView(v, env.OWNER_NAME, nonce, url.searchParams.has("saved")),
+            editView(
+              v,
+              env.OWNER_NAME,
+              nonce,
+              url.searchParams.has("saved"),
+              transcript,
+            ),
             200,
             true,
           );
@@ -433,6 +485,24 @@ export default {
         }
         return new Response("Not found", { status: 404 });
       }
+      const detailsRoute = /^\/v\/([a-z0-9_-]+)\/details$/.exec(path);
+      if (detailsRoute && req.method !== "POST") {
+        const v = await getVideo(env.VIDEOS, detailsRoute[1]);
+        if (!v) return new Response("Video not found", { status: 404 });
+        return Response.json(
+          {
+            title: v.title,
+            description: v.description,
+            status: v.processingStatus ?? "idle",
+          },
+          {
+            headers: {
+              "cache-control": "no-store",
+              "x-content-type-options": "nosniff",
+            },
+          },
+        );
+      }
       const id = keyFromPage(path);
       if (id && req.method !== "POST") {
         const v = await getVideo(env.VIDEOS, id);
@@ -460,7 +530,7 @@ export default {
       );
       return new Response(
         "Unable to complete this request. Please try again.",
-        { status: 503, headers: jsonHeaders },
+        { status: 503, headers: errorHeaders },
       );
     }
   },

@@ -36,9 +36,33 @@ server-rendered app uses native forms and controls without a client framework.
 
 R2 is bound as `VIDEOS`. Preserve the configured account when deploying. Deploy
 the Worker without production routes first, test it on its workers.dev URL, then
-attach the checked-in production routes. To roll back routing, remove only the
+attach the checked-in production routes. Production routes cover only viewer
+pages and library screens; original media continues to use the R2 custom domain. To roll back routing, remove only the
 routes owned by this Worker; the existing R2 custom domain remains the origin.
 
 Capso enables video page links through the local `cloudShareVideoPagesEnabled`
 preference. When enabled, the app creates the poster and a 1080p playback copy
 before returning the viewer URL. Existing original videos remain downloadable.
+
+## Automatic video details
+
+R2 upload notifications feed a queue which starts a durable Workflow for each
+original video version. Whisper Large v3 Turbo transcribes the audio; GPT-OSS
+20B produces a title and description from that transcript. Inference runs on
+Cloudflare and incurs usage charges. Public page visits cannot start inference.
+Duplicate notifications reuse the same Workflow instance and completed audio
+parts are reused after a retry.
+
+Capso prepares one-minute M4A audio parts during upload, supporting up to two
+hours of audio. Older uploads without prepared audio can use the Media binding
+when the source is under 100 MB and ten minutes; longer or larger legacy videos
+need audio preparation first. The processor never silently transcribes just the
+first minute. Failed processing leaves the video and existing text available.
+
+Transcripts and intermediate model results are stored in `evan-video-analysis`,
+a separate private bucket. Only a signed-in library session can view the full
+transcript. Public pages and preview tags contain the generated title and
+description. Manual edits are marked and preserved across delayed results and
+retries. A recording with no usable speech keeps its existing details.
+
+Removing an original video queues cleanup of its derived assets and analysis.

@@ -51,6 +51,7 @@ enum S3CompatibleHTTP {
         )
     }
 
+    @discardableResult
     static func putObject(
         file: URL,
         target: Target,
@@ -58,7 +59,7 @@ enum S3CompatibleHTTP {
         accessKeyId: String,
         secretAccessKey: String,
         contentType: String
-    ) async throws {
+    ) async throws -> String? {
         let (payloadHash, contentLength): (String, Int)
         do {
             (payloadHash, contentLength) = try sha256File(file)
@@ -79,6 +80,7 @@ enum S3CompatibleHTTP {
         do {
             let (body, response) = try await URLSession.shared.upload(for: request, fromFile: file)
             try validate(response: response, body: body)
+            return (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "ETag")?.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
         } catch let error as ShareError {
             throw error
         } catch {

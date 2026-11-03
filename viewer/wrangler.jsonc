@@ -15,6 +15,10 @@
     {
       "binding": "VIDEOS",
       "bucket_name": "evan-screencap"
+    },
+    {
+      "binding": "ANALYSIS",
+      "bucket_name": "evan-video-analysis"
     }
   ],
   "vars": {
@@ -35,5 +39,59 @@
         "period": 60
       }
     }
-  ]
+  ],
+  "routes": [
+    {
+      "pattern": "content.evanfurniss.com/",
+      "zone_name": "evanfurniss.com"
+    },
+    {
+      "pattern": "content.evanfurniss.com/v/*",
+      "zone_name": "evanfurniss.com"
+    },
+    {
+      "pattern": "content.evanfurniss.com/library*",
+      "zone_name": "evanfurniss.com"
+    },
+    {
+      "pattern": "content.evanfurniss.com/login",
+      "zone_name": "evanfurniss.com"
+    },
+    {
+      "pattern": "content.evanfurniss.com/logout",
+      "zone_name": "evanfurniss.com"
+    },
+    {
+      "pattern": "content.evanfurniss.com/poster.svg",
+      "zone_name": "evanfurniss.com"
+    },
+    {
+      "pattern": "content.evanfurniss.com/health",
+      "zone_name": "evanfurniss.com"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "media": {
+    "binding": "MEDIA"
+  },
+  "workflows": [
+    {
+      "name": "evan-video-enrichment",
+      "binding": "ENRICHMENT",
+      "class_name": "VideoEnrichment"
+    }
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "evan-video-uploads",
+        "max_batch_size": 5,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "evan-video-uploads-dlq"
+      }
+    ]
+  }
 }
