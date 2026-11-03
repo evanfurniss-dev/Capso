@@ -2,7 +2,6 @@ import { handleUploadEvents } from "./enrichment";
 export { VideoEnrichment } from "./enrichment";
 import {
   shell,
-  minimumPasswordLength,
   videoView,
   loginView,
   libraryView,
@@ -343,7 +342,7 @@ export default {
           const fields = new URLSearchParams(await boundedBody(req));
           const password = fields.get("password") ?? "";
           if (
-            password.length < minimumPasswordLength ||
+            !password ||
             password.length > 256 ||
             !(await safeEqual(password, env.ADMIN_PASSWORD))
           )

@@ -1,4 +1,3 @@
-export const minimumPasswordLength = 12;
 export const escape = (s: string) =>
   s.replace(
     /[&<>"']/g,
@@ -72,7 +71,7 @@ export function duration(n: number) {
 export function loginView(owner: string, nonce: string, error = "") {
   return shell(
     "Sign in",
-    `<section class="narrow panel"><h1>My video library</h1><p class="note">Sign in to edit your recordings.</p><form method="post" action="/login" class="form"><div><label for="password">Library password</label><input type="password" id="password" name="password" autocomplete="current-password" required minlength="${minimumPasswordLength}" maxlength="256" ${error ? 'aria-describedby="login-error" aria-invalid="true"' : ""}></div>${error ? `<p class="error" id="login-error" role="alert">${escape(error)}</p>` : ""}<button class="primary" type="submit">Sign in</button></form></section>`,
+    `<section class="narrow panel"><h1>My video library</h1><p class="note">Sign in to edit your recordings.</p><form method="post" action="/login" class="form"><div><label for="password">Library password</label><input type="password" id="password" name="password" autocomplete="current-password" required maxlength="256" ${error ? 'aria-describedby="login-error" aria-invalid="true"' : ""}></div>${error ? `<p class="error" id="login-error" role="alert">${escape(error)}</p>` : ""}<button class="primary" type="submit">Sign in</button></form></section>`,
     owner,
     nonce,
   );

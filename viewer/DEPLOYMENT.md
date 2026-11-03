@@ -35,5 +35,6 @@ deletions. The analysis bucket has public access disabled. The local Capso build
 was relaunched, and its R2 configuration and automatic upload setting were
 checked in the app.
 
-The library accepts passwords from 12 to 256 characters. The form and server use
-the same minimum. The login tests cover an exactly 12-character password.
+The sign-in form and server accept the configured password without a minimum
+length gate. The login tests cover an existing 10-character password, rejected
+incorrect passwords, and cross-origin requests.
