@@ -1243,6 +1243,11 @@ public final class AppSettings: @unchecked Sendable {
         set { defaults.set(newValue, forKey: "cloudShareEndpoint") }
     }
 
+    public var cloudShareVideoPagesEnabled: Bool {
+        get { defaults.bool(forKey: "cloudShareVideoPagesEnabled") }
+        set { defaults.set(newValue, forKey: "cloudShareVideoPagesEnabled") }
+    }
+
     public var cloudSharePathPrefix: String? {
         get { defaults.string(forKey: "cloudSharePathPrefix") }
         set { defaults.set(newValue, forKey: "cloudSharePathPrefix") }

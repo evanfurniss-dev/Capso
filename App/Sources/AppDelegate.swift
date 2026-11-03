@@ -386,6 +386,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         var fields: [String: String] = [:]
+        if settings.cloudShareVideoPagesEnabled {
+            fields["videoPages"] = "true"
+        }
         if let accountID = settings.cloudShareAccountID {
             fields["accountID"] = accountID
         }

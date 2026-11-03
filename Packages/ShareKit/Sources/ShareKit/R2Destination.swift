@@ -12,10 +12,26 @@ public actor R2Destination: ShareDestination {
     }
 
     public nonisolated func publicURL(for key: String) -> URL {
-        config.publicURL(forObjectKey: config.objectKey(for: key))
+        let objectKey = config.objectKey(for: key)
+        if usesVideoPages, key.lowercased().hasSuffix(".mp4") {
+            let id = String(key.dropLast(4))
+            return URL(string: "\(config.urlPrefix)/v/\(ShareConfig.encodeObjectKey(id))")!
+        }
+        return config.publicURL(forObjectKey: objectKey)
+    }
+
+    private nonisolated var usesVideoPages: Bool {
+        config.value("videoPages") == "true" && config.pathPrefix == nil
     }
 
     public func upload(file: URL, key: String, contentType: String) async throws -> URL {
+        let assets: VideoShareAssets?
+        if usesVideoPages, key.lowercased().hasSuffix(".mp4") {
+            assets = try await VideoShareAssets.prepare(file: file)
+        } else {
+            assets = nil
+        }
+        defer { assets?.removeTemporaryFiles() }
         let objectKey = config.objectKey(for: key)
         let target = S3CompatibleHTTP.r2Target(
             accountID: config.accountID,
@@ -31,7 +47,24 @@ public actor R2Destination: ShareDestination {
             secretAccessKey: secretKey,
             contentType: contentType
         )
-        return config.publicURL(forObjectKey: objectKey)
+        if let assets {
+            let id = String(key.dropLast(4))
+            try await putAsset(assets.poster, key: "assets/\(id)/poster.jpg", contentType: "image/jpeg")
+            try await putAsset(assets.playback, key: "assets/\(id)/playback.mp4", contentType: "video/mp4")
+            let metadata = assets.directory.appendingPathComponent("metadata.json")
+            let details: [String: Any] = ["title": "Screen recording", "description": "", "duration": assets.duration]
+            try JSONSerialization.data(withJSONObject: details).write(to: metadata)
+            try await putAsset(metadata, key: "metadata/\(id).json", contentType: "application/json")
+        }
+        return publicURL(for: key)
+    }
+
+    private func putAsset(_ file: URL, key: String, contentType: String) async throws {
+        try await S3CompatibleHTTP.putObject(
+            file: file,
+            target: S3CompatibleHTTP.r2Target(accountID: config.accountID, bucket: config.bucket, objectKey: key),
+            region: "auto", accessKeyId: accessKey, secretAccessKey: secretKey, contentType: contentType
+        )
     }
 
     public func delete(key: String) async throws {
@@ -47,6 +80,15 @@ public actor R2Destination: ShareDestination {
             accessKeyId: accessKey,
             secretAccessKey: secretKey
         )
+        if usesVideoPages, key.lowercased().hasSuffix(".mp4") {
+            let id = String(key.dropLast(4))
+            for assetKey in ["assets/\(id)/poster.jpg", "assets/\(id)/playback.mp4", "metadata/\(id).json"] {
+                try await S3CompatibleHTTP.deleteObject(
+                    target: S3CompatibleHTTP.r2Target(accountID: config.accountID, bucket: config.bucket, objectKey: assetKey),
+                    region: "auto", accessKeyId: accessKey, secretAccessKey: secretKey
+                )
+            }
+        }
     }
 
     public func validateConfig() async throws {

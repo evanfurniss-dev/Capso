@@ -209,7 +209,8 @@ final class HistoryCoordinator {
               let key = URL(string: cloudURLString)?.lastPathComponent,
               !key.isEmpty else { return }
         do {
-            try await coord.destination.delete(key: key)
+            let isVideoPage = URL(string: cloudURLString)?.path.hasPrefix("/v/") == true
+            try await coord.destination.delete(key: isVideoPage ? key + ".mp4" : key)
         } catch {
             print("Cloud delete failed (proceeding with local delete): \(error)")
         }
