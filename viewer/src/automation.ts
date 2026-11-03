@@ -117,6 +117,7 @@ export function eventVideoID(
       "CopyObject",
       "CompleteMultipartUpload",
       "DeleteObject",
+      "LifecycleDeletion",
     ].includes(String(v.action))
   )
     return null;
@@ -126,9 +127,10 @@ export function eventVideoID(
   const root = /^([a-z0-9_-]+)\.mp4$/.exec(key),
     meta = /^metadata\/([a-z0-9_-]+)\.json$/.exec(key);
   const id = root?.[1] ?? meta?.[1];
-  if (!id || !validID.test(id) || (v.action === "DeleteObject" && !root))
-    return null;
-  return { id, deleted: v.action === "DeleteObject" };
+  const deleted =
+    v.action === "DeleteObject" || v.action === "LifecycleDeletion";
+  if (!id || !validID.test(id) || (deleted && !root)) return null;
+  return { id, deleted };
 }
 export function preparedAudio(
   value: unknown,

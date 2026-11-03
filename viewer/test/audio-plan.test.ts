@@ -20,10 +20,15 @@ test("upload notifications accept original recordings and metadata while ignorin
     id: "ai6uo2q",
     deleted: true,
   });
+  assert.deepEqual(eventVideoID(make("ai6uo2q.mp4", "LifecycleDeletion")), {
+    id: "ai6uo2q",
+    deleted: true,
+  });
   for (const value of [
     make("assets/ai6uo2q/playback.mp4"),
     make("../ai6uo2q.mp4"),
     make("ai6uo2q.mp4", "GetObject"),
+    make("metadata/ai6uo2q.json", "LifecycleDeletion"),
     make("ai6uo2q.mp4", "PutObject", "another-bucket"),
     null,
   ])

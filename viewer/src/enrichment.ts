@@ -218,6 +218,7 @@ export class VideoEnrichment extends WorkflowEntrypoint<Env, EnrichmentParams> {
           const usable =
             hasUsableTranscript(text) &&
             (result.transcription_info?.duration_after_vad ?? 1) > 0;
+          await currentSource(this.env, p);
           await this.env.ANALYSIS.put(
             key,
             JSON.stringify({
@@ -230,6 +231,7 @@ export class VideoEnrichment extends WorkflowEntrypoint<Env, EnrichmentParams> {
         });
       }
       const transcriptKey = await step.do("assemble transcript", async () => {
+        await currentSource(this.env, p);
         const transcript: VideoTranscript = { text: "", segments: [] };
         const texts: string[] = [];
         for (let i = 0; i < manifest.parts.length; i++) {
@@ -245,6 +247,7 @@ export class VideoEnrichment extends WorkflowEntrypoint<Env, EnrichmentParams> {
         if (transcript.text.length > 400000)
           throw new Error("Transcript exceeds the summary limit");
         const key = `${prefix}/transcript.json`;
+        await currentSource(this.env, p);
         await this.env.ANALYSIS.put(key, JSON.stringify(transcript), {
           httpMetadata: { contentType: "application/json" },
         });
@@ -269,6 +272,7 @@ export class VideoEnrichment extends WorkflowEntrypoint<Env, EnrichmentParams> {
         "generate title and description",
         retry,
         async () => {
+          await currentSource(this.env, p);
           const transcript = await this.env.ANALYSIS.get(transcriptKey);
           if (!transcript) throw new Error("Transcript is unavailable");
           const { text } = await transcript.json<VideoTranscript>();
@@ -295,6 +299,7 @@ export class VideoEnrichment extends WorkflowEntrypoint<Env, EnrichmentParams> {
               .filter((item) => item.type === "output_text")
               .map((item) => ("text" in item ? item.text : ""))
               .join("");
+          await currentSource(this.env, p);
           const details = parseGeneratedDetails(content);
           const key = `${prefix}/details.json`;
           await this.env.ANALYSIS.put(key, JSON.stringify(details), {

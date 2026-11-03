@@ -46,8 +46,11 @@ before returning the viewer URL. Existing original videos remain downloadable.
 
 ## Automatic video details
 
-R2 upload notifications feed a queue which starts a durable Workflow for each
-original video version. Whisper Large v3 Turbo transcribes the audio; GPT-OSS
+R2 notifications for `metadata/*.json` feed a queue which starts a durable
+Workflow for each original video version. Capso writes this manifest after all
+audio parts have uploaded. This avoids processing an incomplete upload. Existing
+videos can be backfilled by triggering the Workflow with their ID and source
+ETag. Whisper Large v3 Turbo transcribes the audio; GPT-OSS
 20B produces a title and description from that transcript. Inference runs on
 Cloudflare and incurs usage charges. Public page visits cannot start inference.
 Duplicate notifications reuse the same Workflow instance and completed audio
@@ -66,3 +69,7 @@ description. Manual edits are marked and preserved across delayed results and
 retries. A recording with no usable speech keeps its existing details.
 
 Removing an original video queues cleanup of its derived assets and analysis.
+Configure a second R2 rule for object deletion with suffix `.mp4`. Both rules
+use `evan-video-uploads`; failures after queue retries go to
+`evan-video-uploads-dlq`. Do not add an original `.mp4` creation rule for Capso
+uploads, because that event arrives before their audio manifest is ready.
