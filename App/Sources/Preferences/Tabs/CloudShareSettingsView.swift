@@ -42,7 +42,7 @@ struct CloudShareSettingsView: View {
                 viewModel.cloudShareAutoUploadEnabled = true
             }
         } message: {
-            Text(String(localized: "Every new screenshot and recording will be uploaded to your configured storage. Each successful share link will replace the current clipboard contents."))
+            Text(String(localized: "Every new screenshot and recording will be uploaded to your configured storage. Screenshot uploads keep the image on the clipboard. Video uploads copy the share link."))
         }
     }
 
@@ -116,15 +116,15 @@ struct CloudShareSettingsView: View {
                 SettingCard {
                     SettingRow(
                         label: "Automatically Upload New Captures",
-                        sublabel: "Upload new screenshots and recordings, then copy the share link"
+                        sublabel: "Upload captures; keep screenshot images and copy video links"
                     ) {
                         Toggle("", isOn: automaticUploadBinding)
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
                     SettingRow(
-                        label: "Copy Link When Upload Starts",
-                        sublabel: "Paste the link right away; it works once the upload finishes",
+                        label: "Copy Video Link When Upload Starts",
+                        sublabel: "Copy video links right away; they work once the upload finishes",
                         showDivider: true
                     ) {
                         Toggle("", isOn: $viewModel.cloudShareCopyLinkWhenUploadStarts)
