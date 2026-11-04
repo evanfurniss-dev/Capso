@@ -28,6 +28,20 @@ Choose a strong password during setup. Rotating it expires existing sessions.
 
 ## Design sources
 
+The current visual direction follows https://tr.af/: a black canvas, a narrow
+file-browser rail, muted monochrome controls, and pixel-style monospace labels.
+The existing native forms and player controls remain in place. Departure Mono
+1.500 is self-hosted from the author's repository at
+https://github.com/rektdeckard/departure-mono and distributed under the SIL Open
+Font License in `public/fonts/OFL.txt`. Body descriptions and form fields use a
+system sans-serif for readability.
+
+Upload `public/fonts/departure-mono-1.500.woff2` to
+`evan-screencap/assets/fonts/departure-mono-1.500.woff2` with MIME type
+`font/woff2`, and `public/fonts/OFL.txt` to `evan-screencap/assets/fonts/OFL.txt`
+with MIME type `text/plain`. The existing R2 custom domain serves these assets.
+The Worker also allows these exact keys on its development hostname.
+
 Native HTML components adapt the tokens, button states, and spacing from
 https://ui.shadcn.com/docs/components/button. COSS UI's React/Base UI components
 were considered at https://coss.com/ui/docs/components/button; this small

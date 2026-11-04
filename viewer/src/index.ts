@@ -177,10 +177,10 @@ export async function getVideo(
         : undefined,
   };
 }
-const fallbackPoster = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"><rect width="1200" height="630" fill="#e6eeeb"/><rect x="90" y="72" width="1020" height="486" rx="22" fill="#164b44"/><circle cx="600" cy="285" r="58" fill="white"/><path d="M585 258L630 285L585 312Z" fill="#164b44"/><text x="600" y="428" font-family="system-ui,sans-serif" font-size="36" text-anchor="middle" fill="white">A recording from Evan Furniss</text></svg>`;
+const fallbackPoster = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"><rect width="1200" height="630" fill="#000"/><rect x="90" y="72" width="1020" height="486" rx="10" fill="#111"/><circle cx="600" cy="285" r="58" fill="white"/><path d="M585 258L630 285L585 312Z" fill="#111"/><text x="600" y="428" font-family="system-ui,sans-serif" font-size="36" text-anchor="middle" fill="white">A recording from Evan Furniss</text></svg>`;
 async function asset(req: Request, env: Env, key: string) {
   if (
-    !/^(?:_capso_test_[a-z0-9]+\.txt|[a-z0-9_-]+\.(?:mp4|png|jpg|jpeg|gif|webp)|assets\/[a-z0-9_-]+\/(?:poster\.jpg|playback\.mp4))$/.test(
+    !/^(?:_capso_test_[a-z0-9]+\.txt|[a-z0-9_-]+\.(?:mp4|png|jpg|jpeg|gif|webp)|assets\/[a-z0-9_-]+\/(?:poster\.jpg|playback\.mp4)|assets\/fonts\/(?:departure-mono-1\.500\.woff2|OFL\.txt))$/.test(
       key,
     )
   )
