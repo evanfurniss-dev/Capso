@@ -1725,7 +1725,8 @@ final class CaptureCoordinator {
                     await self.performShareAfterCapture(
                         result: outputResult,
                         entryID: entryID,
-                        coord: coord
+                        coord: coord,
+                        copyLink: false
                     )
                 }
             }
@@ -2326,7 +2327,8 @@ final class CaptureCoordinator {
     private func performShareAfterCapture(
         result: CaptureResult,
         entryID: UUID,
-        coord: ShareCoordinator
+        coord: ShareCoordinator,
+        copyLink: Bool = true
     ) async {
         let image = result.image
         let output = settings.screenshotOutputOptions
@@ -2360,14 +2362,13 @@ final class CaptureCoordinator {
 
         do {
             logDiagnostic("Cloud Share upload starting")
-            let url = try await coord.upload(file: tempURL, contentType: output.format.mimeType)
-            // ShareCoordinator already copied the URL to clipboard on success.
+            let url = try await coord.upload(file: tempURL, contentType: output.format.mimeType, copyLink: copyLink)
             logDiagnostic("Cloud Share upload succeeded host=\(url.host ?? "unknown")")
             historyCoordinator?.setCloudURL(id: entryID, url: url.absoluteString)
             logDiagnostic("Cloud Share history URL persisted")
             Self.postNotification(
                 title: String(localized: "Cloud share ready"),
-                body: String(localized: "Link copied to clipboard.")
+                body: copyLink ? String(localized: "Link copied to clipboard.") : String(localized: "Screenshot uploaded.")
             )
         } catch let err as ShareError {
             logDiagnostic("Cloud Share upload failed shareError=\(Self.humanizeShareError(err))")

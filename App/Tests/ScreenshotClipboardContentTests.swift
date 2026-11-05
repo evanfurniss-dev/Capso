@@ -1,11 +1,50 @@
 import AppKit
 import CaptureKit
 import SharedKit
+import ShareKit
 import XCTest
 @testable import Capso
 
 @MainActor
 final class ScreenshotClipboardContentTests: XCTestCase {
+    private actor ScreenshotUploadDestination: ShareDestination {
+        nonisolated func publicURL(for key: String) -> URL { URL(string: "https://example.test/\(key)")! }
+        func upload(file: URL, key: String, contentType: String) async throws -> URL { publicURL(for: key) }
+        func delete(key: String) async throws {}
+        func validateConfig() async throws {}
+    }
+
+    func testAutomaticPreviewUploadKeepsScreenshotImageOnClipboard() async throws {
+        let settings = makeSettings()
+        settings.screenshotAutoCopy = true
+        settings.screenshotClipboardContent = .image
+        settings.quickAccessAutoClose = false
+        let coordinator = CaptureCoordinator(settings: settings)
+        coordinator.shareCoordinator = ShareCoordinator(destination: ScreenshotUploadDestination()) { true }
+        let pasteboard = NSPasteboard.general
+        let previousItems = (pasteboard.pasteboardItems ?? []).map { item in
+            let copy = NSPasteboardItem()
+            for type in item.types {
+                if let data = item.data(forType: type) { copy.setData(data, forType: type) }
+            }
+            return copy
+        }
+        defer {
+            coordinator.closeAllQuickAccess()
+            pasteboard.clearContents()
+            pasteboard.writeObjects(previousItems)
+        }
+        let result = try makeCaptureResult()
+        coordinator.applyDefaultPostCaptureActions(result, entryID: UUID())
+        let imageData = try XCTUnwrap(pasteboard.data(forType: .png))
+        let uploaded = expectation(description: "Automatic screenshot upload finished")
+        let window = coordinator.showQuickAccess(for: result, entryID: UUID(), autoUpload: true)
+        window.onUploadSucceeded = { _ in uploaded.fulfill() }
+        await fulfillment(of: [uploaded], timeout: 5)
+        XCTAssertEqual(pasteboard.data(forType: .png), imageData)
+        XCTAssertNil(pasteboard.string(forType: .string))
+    }
+
     func testQuickAccessSaveFailureKeepsPreviewAvailableForRetry() throws {
         let settings = makeSettings()
         settings.quickAccessAutoClose = false

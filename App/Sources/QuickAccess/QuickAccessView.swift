@@ -38,6 +38,7 @@ struct QuickAccessView: View {
     @State private var visualState: PanelUploadState = .idle
     @State private var uploadAttemptGate = UploadAttemptGate()
     @State private var didStartAutoUpload = false
+    @State private var uploadCopiesLink = true
     @State private var dragFileStore = QuickAccessDragFileStore()
     @State private var dragFileID = UUID()
     @State private var preparedDragFileURL: URL?
@@ -55,7 +56,7 @@ struct QuickAccessView: View {
     }
 
     private enum HoverAction: Hashable {
-        case copy, save, drag, annotate, ocr, translate, pin, upload, linkCopied, overflow
+        case copy, save, drag, annotate, ocr, translate, pin, upload, linkCopied, uploaded, overflow
     }
 
     private var isRevealed: Bool { isHovering || isFocused }
@@ -110,7 +111,7 @@ struct QuickAccessView: View {
         .overlay(alignment: .bottom) {
             if case .failed(let err) = visualState {
                 FailureToast(error: err) {
-                    Task { await performUpload() }  // retry
+                    Task { await performUpload(copyLink: uploadCopiesLink) }  // retry
                 } onDismiss: {
                     visualState = .idle
                 }
@@ -309,7 +310,7 @@ struct QuickAccessView: View {
                     .controlSize(.small)
                     .frame(width: 28, height: 26)  // matches toolButton height
             case .succeeded:
-                toolButton(.linkCopied, icon: "checkmark.circle.fill", action: {})
+                toolButton(uploadCopiesLink ? .linkCopied : .uploaded, icon: "checkmark.circle.fill", action: {})
                     .foregroundStyle(.green)
                     .disabled(true)
             }
@@ -453,9 +454,10 @@ struct QuickAccessView: View {
         try? dragFileStore.removeFile(for: dragFileID)
     }
 
-    private func performUpload() async {
+    private func performUpload(copyLink: Bool = true) async {
         guard let coord = shareCoordinator else { return }
         guard uploadAttemptGate.begin() else { return }
+        uploadCopiesLink = copyLink
         visualState = .uploading
         defer { uploadAttemptGate.finish() }
 
@@ -486,7 +488,7 @@ struct QuickAccessView: View {
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
         do {
-            let cloudURL = try await coord.upload(file: tempURL, contentType: output.format.mimeType)
+            let cloudURL = try await coord.upload(file: tempURL, contentType: output.format.mimeType, copyLink: copyLink)
             onUploadSucceeded?(cloudURL.absoluteString)
             visualState = .succeeded
             try? await Task.sleep(for: .seconds(3))
@@ -503,7 +505,7 @@ struct QuickAccessView: View {
     private func startAutoUploadIfNeeded() {
         guard autoUpload, !didStartAutoUpload, shareCoordinator != nil else { return }
         didStartAutoUpload = true
-        Task { await performUpload() }
+        Task { await performUpload(copyLink: false) }
     }
 
     @ViewBuilder
@@ -547,7 +549,7 @@ struct QuickAccessView: View {
 
     private func toolForeground(_ kind: HoverAction, isPrimary: Bool) -> Color {
         if isPrimary { return .white }
-        if kind == .linkCopied { return .green }
+        if kind == .linkCopied || kind == .uploaded { return .green }
         return Color.primary.opacity(hoveredAction == kind ? 0.96 : 0.78)
     }
 
@@ -567,7 +569,7 @@ struct QuickAccessView: View {
         case .ocr:       return ("o", [.command, .shift])
         case .translate: return ("t", [.command, .shift])
         case .pin:       return ("p", [.command])
-        case .upload, .linkCopied, .overflow: return nil
+        case .upload, .linkCopied, .uploaded, .overflow: return nil
         }
     }
 
@@ -596,6 +598,7 @@ struct QuickAccessView: View {
         case .pin: return String(localized: "Pin")
         case .upload: return String(localized: "Upload to Cloud")
         case .linkCopied: return String(localized: "Link Copied!")
+        case .uploaded: return String(localized: "Screenshot uploaded")
         case .overflow: return String(localized: "More actions")
         }
     }
@@ -611,6 +614,7 @@ struct QuickAccessView: View {
         case .pin: return String(localized: "Pin to screen")
         case .upload: return String(localized: "Upload screenshot to cloud and copy link")
         case .linkCopied: return String(localized: "Link has been copied to clipboard")
+        case .uploaded: return String(localized: "Screenshot uploaded")
         case .overflow: return String(localized: "Show extract text and translation actions")
         }
     }

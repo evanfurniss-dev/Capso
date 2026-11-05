@@ -62,3 +62,20 @@ extension SPUUpdater: SoftwareUpdating {
         set { AutomaticInstallPreference.setValue(newValue, in: .standard) }
     }
 }
+
+/// Safe default for the fork before an independently signed update channel exists.
+@MainActor
+final class OfflineSoftwareUpdater: SoftwareUpdating {
+    let canCheckForUpdates = false
+    var automaticallyChecksForUpdates: Bool {
+        get { false }
+        set { }
+    }
+    var storedAutomaticallyDownloadsUpdates: Bool {
+        get { false }
+        set { }
+    }
+    var updateCheckInterval: TimeInterval = 86_400
+    func checkForUpdateInformation() { }
+    func checkForUpdates() { }
+}

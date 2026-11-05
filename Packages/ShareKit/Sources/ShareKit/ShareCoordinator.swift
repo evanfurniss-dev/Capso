@@ -27,6 +27,7 @@ public final class ShareCoordinator {
     private struct UploadRequest {
         let file: URL
         let contentType: String
+        let copyLink: Bool
         let continuation: CheckedContinuation<URL, Error>
     }
 
@@ -38,14 +39,16 @@ public final class ShareCoordinator {
     /// Uploads `file` and copies its URL to the clipboard — on success, or as soon
     /// as the upload starts when `copiesLinkWhenUploadStarts` says so.
     /// Returns the URL on success; throws on failure. Updates `state` for observers.
-    /// Clipboard is **never** written on failure.
+    /// Set `copyLink` to false for background screenshot uploads so the image stays
+    /// on the clipboard. With early copying disabled, failures leave it unchanged.
     @discardableResult
-    public func upload(file: URL, contentType: String) async throws -> URL {
+    public func upload(file: URL, contentType: String, copyLink: Bool = true) async throws -> URL {
         try await withCheckedThrowingContinuation { continuation in
             uploadQueue.append(
                 UploadRequest(
                     file: file,
                     contentType: contentType,
+                    copyLink: copyLink,
                     continuation: continuation
                 )
             )
@@ -64,7 +67,7 @@ public final class ShareCoordinator {
             let id = IDGenerator.shortID()
             let ext = request.file.pathExtension
             let key = ext.isEmpty ? id : "\(id).\(ext)"
-            let copiedEarly = copiesLinkWhenUploadStarts()
+            let copiedEarly = request.copyLink && copiesLinkWhenUploadStarts()
             if copiedEarly {
                 copyToClipboard(destination.publicURL(for: key))
             }
@@ -76,7 +79,7 @@ public final class ShareCoordinator {
                     contentType: request.contentType
                 )
                 state = .succeeded(url)
-                if !copiedEarly { copyToClipboard(url) }
+                if request.copyLink && !copiedEarly { copyToClipboard(url) }
                 request.continuation.resume(returning: url)
             } catch let error as ShareError {
                 state = .failed(error)

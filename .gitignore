@@ -38,3 +38,7 @@ CLAUDE.md
 # Local-only scripts (not shipped with the open-source repo)
 scripts/
 .omx/
+
+# Worker local state
+.wrangler/
+dist/

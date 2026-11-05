@@ -5,6 +5,7 @@ import SharedKit
 @MainActor
 final class RecordingPreviewWindow: NSPanel {
     var onCopy: (() -> Void)?
+    var onCopyLibraryLink: (() -> Void)?
     var onSave: (() -> Void)?
     var onClose: (() -> Void)?
 
@@ -26,7 +27,7 @@ final class RecordingPreviewWindow: NSPanel {
         self.state = state
         self.settings = settings
 
-        let windowWidth: CGFloat = 340
+        let windowWidth: CGFloat = state.hasLibraryLinkAction ? 390 : 340
         let windowHeight: CGFloat = 140
 
         let screen = NSScreen.main ?? NSScreen.screens.first!
@@ -61,6 +62,7 @@ final class RecordingPreviewWindow: NSPanel {
             fileSize: fileSize,
             state: state,
             onCopy: { [weak self] in self?.onCopy?() },
+            onCopyLibraryLink: { [weak self] in self?.onCopyLibraryLink?() },
             onSave: { [weak self] in self?.onSave?() },
             onClose: { [weak self] in self?.onClose?() }
         )

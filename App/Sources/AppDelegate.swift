@@ -377,7 +377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return nil
         }
 
-        let keychain = KeychainHelper(service: "com.awesomemacapps.capso.share.\(provider.rawValue)")
+        let keychain = KeychainHelper(service: "io.startsmooth.capso.share.\(provider.rawValue)")
         guard
             let access = AppDelegate.keychainString(keychain, account: "accessKey"),
             let secret = AppDelegate.keychainString(keychain, account: "secretKey")
@@ -386,6 +386,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         var fields: [String: String] = [:]
+        if settings.cloudShareVideoPagesEnabled {
+            fields["videoPages"] = "true"
+        }
         if let accountID = settings.cloudShareAccountID {
             fields["accountID"] = accountID
         }
@@ -409,7 +412,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Read a string from Keychain. Returns nil on missing entry or known recoverable errors.
-    /// Any unexpected error triggers an assertion failure in debug builds.
+    /// A denied prompt must leave sharing unavailable without terminating Capso.
     private static func keychainString(_ keychain: KeychainHelper, account: String) -> String? {
         do {
             return try keychain.get(account: account)
@@ -419,7 +422,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Settings → Cloud Share to trigger refreshShareCoordinator().
             return nil
         } catch {
-            assertionFailure("Unexpected Keychain error reading '\(account)': \(error)")
+            DiagnosticLogger.append("Cloud Share credentials are unavailable: \(error)", category: "Keychain")
             return nil
         }
     }

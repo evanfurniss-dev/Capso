@@ -65,6 +65,7 @@ final class RecordingCoordinator {
     private var escLocalMonitor: Any?
     private var escEventTap: CFMachPort?
     private var escEventTapRunLoopSource: CFRunLoopSource?
+    private var recordingShareTasks: [URL: Task<URL, Error>] = [:]
     private var automaticUploadSourceTasks: [URL: Task<URL?, Never>] = [:]
     private struct AutomaticClipboardCopyResult {
         let copied: Bool
@@ -767,7 +768,7 @@ final class RecordingCoordinator {
                     let size = VideoThumbnail.formattedFileSize(VideoThumbnail.fileSize(at: tempURL))
                     let duration = VideoThumbnail.formattedDuration(result.duration)
                     showRecordingPreview(thumbnail: nsThumb, duration: duration, fileSize: size,
-                                        tempURL: tempURL, format: format)
+                                        tempURL: tempURL, format: format, entryID: entryID)
                 }
                 afterStop?()
             } catch {
@@ -1030,11 +1031,12 @@ final class RecordingCoordinator {
     }
 
     private func showRecordingPreview(thumbnail: NSImage?, duration: String, fileSize: String,
-                                      tempURL: URL, format: RecordingKit.RecordingFormat) {
+                                      tempURL: URL, format: RecordingKit.RecordingFormat, entryID: UUID) {
         recordingPreviewWindow?.close()
         recordingPreviewWindow = nil
 
         let state = RecordingPreviewState()
+        state.hasLibraryLinkAction = format != .gif && settings.cloudShareVideoPagesEnabled && historyCoordinator?.shareCoordinator != nil
         let window = RecordingPreviewWindow(
             thumbnail: thumbnail, duration: duration, fileSize: fileSize,
             state: state, settings: settings
@@ -1066,6 +1068,26 @@ final class RecordingCoordinator {
                     state.saveProgress = 0
                     state.progressLabel = String(localized: "Saving…")
                     self.showRecordingCopyFailureAlert(format: format, previewAvailable: true)
+                }
+            }
+        }
+
+        window.onCopyLibraryLink = { [weak self, weak window] in
+            guard let self, let history = self.historyCoordinator, !state.isSaving else { return }
+            state.isSaving = true
+            state.isPreparingLibraryLink = true
+            window?.cancelAutoDismissForSave()
+            Task { @MainActor in
+                defer { state.isSaving = false; state.isPreparingLibraryLink = false }
+                do {
+                    let link = try await self.sharedRecordingUpload(for: tempURL) {
+                        try await history.uploadRecording(url: tempURL, mode: .recording, entryID: entryID)
+                    }
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(link.absoluteString, forType: .string)
+                    state.libraryLinkCopied = true
+                } catch {
+                    CaptureCoordinator.postNotification(title: String(localized: "Could not copy library link"), body: error.localizedDescription)
                 }
             }
         }
@@ -1506,6 +1528,17 @@ final class RecordingCoordinator {
         )
     }
 
+    /// Automatic sharing and the preview action reuse the same upload and result.
+    func sharedRecordingUpload(for source: URL, upload: @escaping @MainActor () async throws -> URL) async throws -> URL {
+        if let existing = recordingShareTasks[source] { return try await existing.value }
+        let task = Task { @MainActor [weak self] in
+            do { return try await upload() }
+            catch { self?.recordingShareTasks[source] = nil; throw error }
+        }
+        recordingShareTasks[source] = task
+        return try await task.value
+    }
+
     private func startAutomaticUploadIfNeeded(
         url: URL,
         format: RecordingKit.RecordingFormat,
@@ -1549,11 +1582,9 @@ final class RecordingCoordinator {
             defer { try? FileManager.default.removeItem(at: stagedURL) }
 
             do {
-                let cloudURL = try await historyCoordinator.uploadRecording(
-                    url: stagedURL,
-                    mode: mode,
-                    entryID: entryID
-                )
+                let cloudURL = try await self.sharedRecordingUpload(for: url) {
+                    try await historyCoordinator.uploadRecording(url: stagedURL, mode: mode, entryID: entryID)
+                }
                 if let copyTask = automaticClipboardCopyTasks[url] {
                     _ = await copyTask.value
                     NSPasteboard.general.clearContents()

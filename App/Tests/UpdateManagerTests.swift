@@ -30,15 +30,10 @@ final class FakeSoftwareUpdater: SoftwareUpdating {
     }
 }
 
-/// The values Sparkle starts from before the user picks anything, which live in
-/// the app's Info.plist rather than in code.
-///
-/// These are deliberately unchanged by this feature: an existing install has
-/// nothing stored for them, so editing the plist would silently move everyone
-/// who upgrades. Anyone who wants a different interval can pick one.
+/// Safe defaults shipped by this fork before an update channel is configured.
 final class ShippedUpdateDefaultsTests: XCTestCase {
-    func testAutomaticChecksAreOnByDefault() {
-        XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "SUEnableAutomaticChecks") as? Bool, true)
+    func testAutomaticChecksAreOffByDefault() {
+        XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "SUEnableAutomaticChecks") as? Bool, false)
     }
 
     func testAutomaticInstallIsOffByDefault() {
@@ -358,5 +353,24 @@ final class UpdateManagerTests: XCTestCase {
 
         XCTAssertEqual(updater.automaticallyChecksForUpdatesWriteCount, checksWrites)
         XCTAssertEqual(updater.automaticallyDownloadsUpdatesWriteCount, downloadsWrites)
+    }
+}
+
+@MainActor
+final class ForkUpdateSafetyTests: XCTestCase {
+    func testForkCannotCheckOrEnableAutomaticUpdates() {
+        let manager = UpdateManager()
+        manager.automaticallyChecksForUpdates = true
+        manager.automaticallyDownloadsUpdates = true
+        manager.checkForUpdates()
+        XCTAssertFalse(manager.canCheckForUpdates)
+        XCTAssertFalse(manager.updater.automaticallyChecksForUpdates)
+        XCTAssertFalse(manager.updater.storedAutomaticallyDownloadsUpdates)
+        XCTAssertNil(manager.status)
+    }
+
+    func testForkHasNoUpstreamTrustConfiguration() {
+        XCTAssertNil(Bundle.main.object(forInfoDictionaryKey: "SUFeedURL"))
+        XCTAssertNil(Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey"))
     }
 }

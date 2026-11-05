@@ -8,6 +8,9 @@ import Observation
 @MainActor
 @Observable
 final class RecordingPreviewState {
+    var hasLibraryLinkAction = false
+    var isPreparingLibraryLink = false
+    var libraryLinkCopied = false
     var isSaving: Bool = false
     var saveProgress: Double = 0
     var progressLabel: String = String(localized: "Saving…")
@@ -19,6 +22,7 @@ struct RecordingPreviewView: View {
     let fileSize: String
     let state: RecordingPreviewState
     let onCopy: () -> Void
+    let onCopyLibraryLink: () -> Void
     let onSave: () -> Void
     let onClose: () -> Void
 
@@ -71,11 +75,14 @@ struct RecordingPreviewView: View {
                 } else {
                     VStack(spacing: 6) {
                         quickActionButton("Copy", systemImage: "doc.on.doc", action: onCopy)
+                        if state.hasLibraryLinkAction {
+                            quickActionButton(state.libraryLinkCopied ? "Link Copied" : "Copy Library Link", systemImage: "link", action: onCopyLibraryLink)
+                        }
                         quickActionButton("Save", systemImage: "square.and.arrow.down", action: onSave)
                     }
                 }
             }
-            .frame(width: 90)
+            .frame(width: state.hasLibraryLinkAction ? 140 : 90)
             .padding(.trailing, 8)
             .padding(.vertical, 8)
 
@@ -101,6 +108,10 @@ struct RecordingPreviewView: View {
     @ViewBuilder
     private var savingOverlay: some View {
         VStack(spacing: 6) {
+            if state.isPreparingLibraryLink {
+                ProgressView().controlSize(.small)
+                Text("Preparing link…").font(.system(size: 11))
+            } else {
             ProgressView(value: state.saveProgress)
                 .progressViewStyle(.linear)
                 .controlSize(.small)
@@ -109,6 +120,7 @@ struct RecordingPreviewView: View {
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
+            }
         }
     }
 

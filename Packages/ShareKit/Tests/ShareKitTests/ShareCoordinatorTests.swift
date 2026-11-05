@@ -54,7 +54,7 @@ struct ShareCoordinatorTests {
                 }
             }
 
-            return URL(string: "https://stub/\(file.lastPathComponent)")!
+            return publicURL(for: key)
         }
 
         func delete(key: String) async throws {}
@@ -279,6 +279,33 @@ struct ShareCoordinatorTests {
         await destination.releaseFirst()
         let url = try await upload.value
         #expect(NSPasteboard.general.string(forType: .string) == url.absoluteString)
+    }
+
+    @Test("Background screenshot uploads preserve image data; the next video copies its link", arguments: [false, true], [false, true])
+    func screenshotKeepsImage(copiesEarly: Bool, fails: Bool) async throws {
+        let destination = BlockingDestination(failFirst: fails)
+        let coord = ShareCoordinator(destination: destination) { copiesEarly }
+        let imageData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setData(imageData, forType: .png)
+
+        let upload = Task { @MainActor in
+            try await coord.upload(file: URL(fileURLWithPath: "/tmp/screenshot.png"), contentType: "image/png", copyLink: false)
+        }
+        await destination.waitUntilFirstStarts()
+        #expect(NSPasteboard.general.data(forType: .png) == imageData)
+        #expect(NSPasteboard.general.string(forType: .string) == nil)
+        await destination.releaseFirst()
+        if fails {
+            await #expect(throws: ShareError.self) { try await upload.value }
+        } else {
+            _ = try await upload.value
+        }
+        #expect(NSPasteboard.general.data(forType: .png) == imageData)
+        #expect(NSPasteboard.general.string(forType: .string) == nil)
+
+        let video = try await coord.upload(file: URL(fileURLWithPath: "/tmp/recording.mp4"), contentType: "video/mp4")
+        #expect(NSPasteboard.general.string(forType: .string) == video.absoluteString)
     }
 
     @Test("Every provider knows its public URL before uploading", arguments: [

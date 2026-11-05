@@ -1142,12 +1142,12 @@ public final class AppSettings: @unchecked Sendable {
     }
 
     public func translationAPIKey() -> String? {
-        try? KeychainHelper(service: "com.awesomemacapps.capso.translation")
+        try? KeychainHelper(service: "io.startsmooth.capso.translation")
             .get(account: translationProvider.rawValue)
     }
 
     public func setTranslationAPIKey(_ value: String?) throws {
-        let keychain = KeychainHelper(service: "com.awesomemacapps.capso.translation")
+        let keychain = KeychainHelper(service: "io.startsmooth.capso.translation")
         let account = translationProvider.rawValue
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if trimmed.isEmpty {
@@ -1241,6 +1241,11 @@ public final class AppSettings: @unchecked Sendable {
     public var cloudShareEndpoint: String? {
         get { defaults.string(forKey: "cloudShareEndpoint") }
         set { defaults.set(newValue, forKey: "cloudShareEndpoint") }
+    }
+
+    public var cloudShareVideoPagesEnabled: Bool {
+        get { defaults.bool(forKey: "cloudShareVideoPagesEnabled") }
+        set { defaults.set(newValue, forKey: "cloudShareVideoPagesEnabled") }
     }
 
     public var cloudSharePathPrefix: String? {

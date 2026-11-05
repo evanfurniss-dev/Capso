@@ -42,7 +42,7 @@ struct CloudShareSettingsView: View {
                 viewModel.cloudShareAutoUploadEnabled = true
             }
         } message: {
-            Text(String(localized: "Every new screenshot and recording will be uploaded to your configured storage. Each successful share link will replace the current clipboard contents."))
+            Text(String(localized: "Every new screenshot and recording will be uploaded to your configured storage. Screenshot uploads keep the image on the clipboard. Video uploads copy the share link."))
         }
     }
 
@@ -116,15 +116,15 @@ struct CloudShareSettingsView: View {
                 SettingCard {
                     SettingRow(
                         label: "Automatically Upload New Captures",
-                        sublabel: "Upload new screenshots and recordings, then copy the share link"
+                        sublabel: "Upload captures; keep screenshot images and copy video links"
                     ) {
                         Toggle("", isOn: automaticUploadBinding)
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
                     SettingRow(
-                        label: "Copy Link When Upload Starts",
-                        sublabel: "Paste the link right away; it works once the upload finishes",
+                        label: "Copy Video Link When Upload Starts",
+                        sublabel: "Copy video links right away; they work once the upload finishes",
                         showDivider: true
                     ) {
                         Toggle("", isOn: $viewModel.cloudShareCopyLinkWhenUploadStarts)
@@ -201,7 +201,7 @@ struct CloudShareSettingsView: View {
             return
         }
 
-        let keychain = KeychainHelper(service: "com.awesomemacapps.capso.share.\(provider.rawValue)")
+        let keychain = KeychainHelper(service: "io.startsmooth.capso.share.\(provider.rawValue)")
         let accessKey = (try? keychain.get(account: "accessKey")) ?? ""
         let secretKey = (try? keychain.get(account: "secretKey")) ?? ""
 
@@ -284,7 +284,7 @@ struct CloudShareSettingsView: View {
         // 2. Delete Keychain entries — surface failures instead of silently swallowing.
         var keychainErrors: [String] = []
         for provider in ShareProvider.allCases {
-            let keychain = KeychainHelper(service: "com.awesomemacapps.capso.share.\(provider.rawValue)")
+            let keychain = KeychainHelper(service: "io.startsmooth.capso.share.\(provider.rawValue)")
             do {
                 try keychain.delete(account: "accessKey")
             } catch {
@@ -320,7 +320,7 @@ struct CloudShareSettingsView: View {
             let list = keychainErrors.joined(separator: ", ")
             testResult = TestResultAlert(
                 title: String(localized: "Couldn't fully clear Keychain"),
-                message: String(format: String(localized: "Some credentials may still be in Keychain: %@.\n\nOpen 'Keychain Access.app' and search for 'com.awesomemacapps.capso.share' to remove them manually."), list)
+                message: String(format: String(localized: "Some credentials may still be in Keychain: %@.\n\nOpen 'Keychain Access.app' and search for 'io.startsmooth.capso.share' to remove them manually."), list)
             )
         }
     }
